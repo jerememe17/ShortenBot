@@ -1,8 +1,9 @@
 import discord
 from discord.ext import commands
 import youtube_dl
+import random
 
-TOKEN = 'Removed for repository'
+TOKEN = ''
 
 bot = commands.Bot(command_prefix='!')
 
@@ -24,10 +25,14 @@ async def shorten(ctx):
     else:
         server = ctx.message.server
         voice_client = bot.voice_client_in(server)
-        player = await voice_client.create_ytdl_player('https://www.youtube.com/watch?v=dQw4w9WgXcQ')
+        clip = random.randint(0,16)
+        player = voice_client.create_ffmpeg_player('Shorten/{}.mp3'.format(clip))
         players[server.id] = player
         player.start()
-        await bot.send_message(ctx.message.channel, 'I thought denial was a river in Egypt, I now realise its the attitude of the Abbott government', tts = True)
+        while (player.is_done() == False):
+            continue
+        await voice_client.disconnect()
+        #await bot.send_message(ctx.message.channel, 'I thought denial was a river in Egypt, I now realise its the attitude of the Abbott government', tts = True)
 
 @bot.command(pass_context=True)
 async def advise(ctx):
