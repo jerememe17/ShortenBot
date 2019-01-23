@@ -2,6 +2,7 @@ import discord
 from discord.ext import commands
 import youtube_dl
 import random
+import os
 
 TOKEN = ''
 
@@ -9,12 +10,12 @@ bot = commands.Bot(command_prefix='!')
 
 players = {}
 
-@bot.event
-async def on_ready():
-   print(bot.user.name + ' running')
+async def choose_soundbite(polly):
+    clip_list = os.listdir('{}/{}'.format(os.getcwd(), polly))
+    clip_choice = random.choice(clip_list)
+    return clip_choice
 
-@bot.command(pass_context=True)
-async def shorten(ctx):
+async def play_soundbite(ctx, polly):
     channel = ctx.message.author.voice.voice_channel
     try:
         await bot.join_voice_channel(channel)
@@ -25,14 +26,21 @@ async def shorten(ctx):
     else:
         server = ctx.message.server
         voice_client = bot.voice_client_in(server)
-        clip = random.randint(0,16)
-        player = voice_client.create_ffmpeg_player('Shorten/{}.mp3'.format(clip))
+        clip = await choose_soundbite(polly)
+        player = voice_client.create_ffmpeg_player('{}/{}'.format(polly, clip))
         players[server.id] = player
         player.start()
         while (player.is_done() == False):
             continue
         await voice_client.disconnect()
-        #await bot.send_message(ctx.message.channel, 'I thought denial was a river in Egypt, I now realise its the attitude of the Abbott government', tts = True)
+
+@bot.event
+async def on_ready():
+   print(bot.user.name + ' running')
+
+@bot.command(pass_context=True)
+async def shorten(ctx):
+    await play_soundbite(ctx, 'Shorten')
 
 @bot.command(pass_context=True)
 async def advise(ctx):
