@@ -14,7 +14,7 @@ def get_valid_commands():
     '''
     result = []
     for dir in os.listdir('politicians'):
-        if os.path.isdir('politicians/' + dir): # get dir
+        if os.path.isdir(os.getcwd() + '/politicians/' + dir): # get dir
             result.append(dir)
     return result
 
@@ -86,7 +86,7 @@ async def play_soundbite(message, polly):
             await message.channel.send('This politician has no soundbites!')
             await v_client.disconnect()
         else:
-            audio = discord.FFmpegPCMAudio('politicians/{}/soundbites/{}'.format(polly, clip))
+            audio = discord.FFmpegPCMAudio('{}/politicians/{}/soundbites/{}'.format(os.getcwd(), polly, clip))
 
             # define the callback function for leaving the channel
             def leave_voice_channel(error):
@@ -130,7 +130,8 @@ async def create_command(message):
             await receive_command(message, polly)
             return
     # Default, not valid command
-    message.channel.say('This is not a valid command! Type !advise for more information')
+    await message.channel.send('This is not a valid command! Type !advise for more information')
+    print(os.getcwd())
 
 async def receive_command(message, polly):
     '''
