@@ -1,24 +1,49 @@
 import discord
-from discord.ext import commands
 import random, os, time, asyncio, configparser
 
 # polly = politician
 
-TOKEN = 'NDgyMTM4MzI2MzUxMDg1NTY5.XSWsFQ.z--IE5TQpmBqVV0lEc1NyfY6gPk'
+TOKEN = os.environ.get('DISCORD_TOKEN')
 
 bot = discord.Client()
+perms = discord.Permissions(70256640)
 
 def get_valid_commands():
+    '''
+    Get the valid politician command names
+    '''
     result = []
-    for file in os.listdir():
-        if os.path.isdir(file): # get dir
-            if not file.startswith('.'): # ignore hidden dir
-                if not file == "env": # ignore environment
-                    result.append(file)
+    for dir in os.listdir('politicians'):
+        if os.path.isdir('politicians/' + dir): # get dir
+            result.append(dir)
+    return result
 
-def get_name_from_config(politician):
+def parse_config(politician):
     config = configparser.ConfigParser()
-    config.read(politician + '/about.cfg')
+    config.read('politicians/' + politician + '/about.cfg')
+    return config
+
+def get_name_from_config(config):
+    '''
+    Get the name of the politician from their config file
+    '''
+    #print (config.sections())
+    return config['INFO']['NAME']
+
+def get_party_from_config(config):
+    '''
+    Get the politician's party from their config file
+    '''
+    return config['INFO']['PARTY']
+
+def get_role_from_config(config):
+    '''
+    Get the politician's role from their config file
+    '''
+    return config['INFO']['POSITION']
+
+def get_avatar(polly):
+    return 'politicians/{}/avatar.jpeg'.format(polly)
 
 async def join_voice_channel(message):
     '''
@@ -34,8 +59,13 @@ async def choose_soundbite(polly):
     '''
     Select a random soundbite to play
     '''
-    clip_list = os.listdir('{}/{}'.format(os.getcwd(), polly))
-    clip_list.remove('about.cfg')
+    clip_list = os.listdir('{}/politicians/{}/soundbites'.format(os.getcwd(), polly))
+    for f in clip_list:
+        f_name, f_ext = os.path.splitext(f)
+        if f_ext != '.mp3':
+            clip_list.remove(f)
+    if len(clip_list) == 0:
+        raise ValueError
     clip_choice = random.choice(clip_list)
     return clip_choice
 
@@ -50,22 +80,27 @@ async def play_soundbite(message, polly):
     except discord.errors.ClientException:
         await message.channel.send('ShortenBot is already playing in the channel!')
     else:
-        clip = await choose_soundbite(polly)
-        audio = discord.FFmpegPCMAudio('{}/{}'.format(polly, clip))
+        try:
+            clip = await choose_soundbite(polly)
+        except ValueError:
+            await message.channel.send('This politician has no soundbites!')
+            await v_client.disconnect()
+        else:
+            audio = discord.FFmpegPCMAudio('politicians/{}/soundbites/{}'.format(polly, clip))
 
-        # define the callback function for leaving the channel
-        def leave_voice_channel(error):
-            '''
-            Leave the voice channel
-            '''
-            coro = v_client.disconnect(force=True)
-            fut = asyncio.run_coroutine_threadsafe(coro, bot.loop)
-            try:
-                fut.result()
-            except:
-                pass
-        
-        v_client.play(audio, after=leave_voice_channel)
+            # define the callback function for leaving the channel
+            def leave_voice_channel(error):
+                '''
+                Leave the voice channel
+                '''
+                coro = v_client.disconnect(force=True)
+                fut = asyncio.run_coroutine_threadsafe(coro, bot.loop)
+                try:
+                    fut.result()
+                except:
+                    pass
+            
+            v_client.play(audio, after=leave_voice_channel)
 
 @bot.event
 async def on_ready():
@@ -83,14 +118,28 @@ async def on_message(message):
         await advise(message)
     elif message.content.startswith('!spill'):
         await spill(message)
-    elif message.content.startswith('!shorten'):
-        await shorten(message)
+    elif message.content.startswith('!'):
+        await create_command(message)
 
-async def shorten(message):
+async def create_command(message):
     '''
-    Play a Bill Shorten soundbite
+    Check if valid politician command, and call the soundbite player if it is
     '''
-    await play_soundbite(message, 'shorten')
+    for polly in get_valid_commands():
+        if message.content[1:].startswith(polly):
+            await receive_command(message, polly)
+            return
+    # Default, not valid command
+    message.channel.say('This is not a valid command! Type !advise for more information')
+
+async def receive_command(message, polly):
+    '''
+    Set the bot up and play a soundbite
+    '''
+    config = parse_config(polly)
+    name = get_name_from_config(config)
+    await message.guild.me.edit(nick=name)
+    await play_soundbite(message, polly)
 
 async def advise(message):
     '''
@@ -103,9 +152,9 @@ async def advise(message):
 
     helpcmd.set_author(name = 'Bill Shorten Help Commands')
 
-    #for politician in get_valid_commands():
-        
-    helpcmd.add_field(name = '!shorten', value = 'Plays a juicy soundbite from Bill Shorten', inline=False)
+    for politician in get_valid_commands():
+        config = parse_config(politician)
+        helpcmd.add_field(name = '!{}'.format(politician), value = 'Plays a juicy soundbite from {}'.format(get_name_from_config(config)), inline=False)
     helpcmd.add_field(name = '!spill', value = 'Bill Shorten will bugger off', inline=False)
     helpcmd.add_field(name = '!advise', value = 'Bill Shorten tells you how to work him')
 
