@@ -141,6 +141,7 @@ async def receive_command(message, polly):
     name = get_name_from_config(config)
     await message.guild.me.edit(nick=name)
     await play_soundbite(message, polly)
+    await message.guild.me.edit(nick="Bill Shorten")
 
 async def advise(message):
     '''
