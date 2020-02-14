@@ -45,6 +45,10 @@ def get_role_from_config(config):
 def get_avatar(polly):
     return 'politicians/{}/avatar.jpeg'.format(polly)
 
+async def finish_talking(message, v_client):
+    await v_client.disconnect(force=True)
+    await message.guild.me.edit(nick="Bill Shorten")
+
 async def join_voice_channel(message):
     '''
     Joins the voice channel that the caller is currently in
@@ -93,7 +97,7 @@ async def play_soundbite(message, polly):
                 '''
                 Leave the voice channel
                 '''
-                coro = v_client.disconnect(force=True)
+                coro = finish_talking(message, v_client)
                 fut = asyncio.run_coroutine_threadsafe(coro, bot.loop)
                 try:
                     fut.result()
@@ -141,7 +145,7 @@ async def receive_command(message, polly):
     name = get_name_from_config(config)
     await message.guild.me.edit(nick=name)
     await play_soundbite(message, polly)
-    await message.guild.me.edit(nick="Bill Shorten")
+    #await message.guild.me.edit(nick="Bill Shorten")
 
 async def advise(message):
     '''
