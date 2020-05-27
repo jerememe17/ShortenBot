@@ -133,8 +133,6 @@ async def create_command(message):
         if message.content[1:].startswith(polly):
             await receive_command(message, polly)
             return
-    # Default, not valid command
-    await message.channel.send('This is not a valid command! Type !advise for more information')
     print(os.getcwd())
 
 async def receive_command(message, polly):
